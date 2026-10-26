@@ -14,6 +14,11 @@ def main(argv=None):
     p.add_argument("--game", help="pasta do jogo (ex.: \"C:\\Riot Games\\League of Legends\\Game\"); detectada automaticamente se omitida")
     p.add_argument("--out", help="pasta de saída (padrão: subpasta 'Corrigidas' ao lado de cada arquivo)")
     p.add_argument("--in-place", action="store_true", help="substitui o arquivo original (o original é salvo como .bak)")
+    p.add_argument("--no-cleanup", action="store_true",
+                   help="não remove arquivos desnecessários (idênticos ao jogo, recomendação de itens, subchunktoc)")
+    p.add_argument("--lite", action="store_true",
+                   help="modo leve: descarta alterações em arquivos que o jogo também guarda em mapas/outros "
+                        "campeões (injeção muito mais rápida; pode perder detalhes como a sombra customizada)")
     p.add_argument("--version", action="version", version="%(prog)s " + __version__)
     args = p.parse_args(argv)
 
@@ -28,5 +33,5 @@ def main(argv=None):
     print("Jogo: %s" % game_dir)
     game = GameData(game_dir)
     mode = "analyze" if args.command == "analyze" else ("inplace" if args.in_place else "fix")
-    reports = batch.run(files, game, mode, out_dir=args.out)
+    reports = batch.run(files, game, mode, out_dir=args.out, cleanup=not args.no_cleanup, lite=args.lite)
     return 1 if any(r.error for r in reports) else 0

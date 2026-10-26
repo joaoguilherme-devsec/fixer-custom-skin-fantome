@@ -54,6 +54,15 @@ class App(tk.Tk):
         ttk.Radiobutton(out, text="Substituir o arquivo original (uma cópia .bak é guardada)",
                         variable=self.mode_var, value="inplace").pack(anchor="w", padx=8, pady=(2, 8))
 
+        self.cleanup_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self, variable=self.cleanup_var,
+                        text="Remover arquivos desnecessários do mod (recomendado: evita que o Rose "
+                             "estoure o tempo de injeção)").pack(anchor="w", padx=16)
+        self.lite_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(self, variable=self.lite_var,
+                        text="Modo leve: descartar alterações em arquivos compartilhados com mapas/outros "
+                             "campeões (use se a skin ainda não aplicar)").pack(anchor="w", padx=16)
+
         actions = ttk.Frame(self)
         actions.pack(fill="x", **pad)
         self.analyze_btn = ttk.Button(actions, text="Analisar", command=lambda: self.start("analyze"))
@@ -135,17 +144,18 @@ class App(tk.Tk):
         self.log.config(state="normal")
         self.log.delete("1.0", "end")
         self.log.config(state="disabled")
-        self.worker = threading.Thread(target=self.work, args=(files, game_dir, mode, out_dir), daemon=True)
+        opts = {"cleanup": self.cleanup_var.get(), "lite": self.lite_var.get()}
+        self.worker = threading.Thread(target=self.work, args=(files, game_dir, mode, out_dir, opts), daemon=True)
         self.worker.start()
 
-    def work(self, files, game_dir, mode, out_dir):
+    def work(self, files, game_dir, mode, out_dir, opts):
         log = lambda m: self.events.put(("log", m))
         try:
             log("Jogo: %s" % game_dir)
             log("Indexando arquivos do jogo...")
             game = GameData(game_dir)
             batch.run(files, game, mode, out_dir=out_dir, log=log,
-                      progress=lambda i, n: self.events.put(("progress", (i, n))))
+                      progress=lambda i, n: self.events.put(("progress", (i, n))), **opts)
         except Exception as e:  # surface anything unexpected in the log window
             log("ERRO: %s" % e)
         finally:

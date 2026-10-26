@@ -25,23 +25,24 @@ def output_path(src, out_dir):
     return os.path.join(out_dir, os.path.basename(src))
 
 
-def run(files, game, mode, out_dir=None, log=print, progress=lambda i, n: None):
+def run(files, game, mode, out_dir=None, log=print, progress=lambda i, n: None, cleanup=True, lite=False):
     """mode: 'analyze', 'fix' (to out_dir) or 'inplace'. Returns list of reports."""
     reports = []
+    opts = {"cleanup": cleanup, "lite": lite}
     for i, src in enumerate(files):
         progress(i, len(files))
         log("== %s" % os.path.basename(src))
         if mode == "analyze":
-            rep = fixer.process(src, game, log=log)
+            rep = fixer.process(src, game, log=log, **opts)
         elif mode == "inplace":
-            rep = fixer.fix_in_place(src, game, log=log)
+            rep = fixer.fix_in_place(src, game, log=log, **opts)
         else:
             dst = output_path(src, out_dir)
             if os.path.normcase(os.path.abspath(dst)) == os.path.normcase(os.path.abspath(src)):
                 rep = fixer.FantomeReport(src)
                 rep.error = "a pasta de saída é a mesma do arquivo original; use 'substituir original'"
             else:
-                rep = fixer.process(src, game, output=dst, log=log)
+                rep = fixer.process(src, game, output=dst, log=log, **opts)
         for line in rep.summary_lines():
             log(line)
         if not rep.error:  # errors were already printed by summary_lines()
